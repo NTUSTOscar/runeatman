@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runeatman 跑咖計畫</title>
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --secondary: #004E64;
+      --accent: #25A18E;
+      --bg: #F7F9FB;
+      --card-bg: #FFFFFF;
+      --text: #2B2D42;
+      --gray: #8D99AE;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header Profile Card */
+    .profile-card {
+      background: linear-gradient(135deg, var(--secondary), #002B36);
+      color: white;
+      padding: 20px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid white;
+      background-color: var(--gray);
+      object-fit: cover;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .coin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* Main Card Layout */
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tabs */
+    .nav-tabs {
+      display: flex;
+      background: #E9ECEF;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--gray);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Form Inputs */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--gray);
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #DEE2E6;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--primary);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn:disabled {
+      background-color: var(--gray);
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: var(--accent);
+    }
+
+    /* Coupon Display */
+    .coupon-box {
+      border: 2px dashed var(--primary);
+      background: #FFF8F5;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .coupon-code {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--primary);
+      margin: 8px 0;
+    }
+
+    /* Loading Overlay */
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .status-msg {
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .status-msg.success { background: #D4EDDA; color: #155724; }
+    .status-msg.error { background: #F8D7DA; color: #721C24; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div>Runeatman 載入中...</div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- User Profile Header -->
+    <div class="profile-card">
+      <img id="user-avatar" class="avatar" src="https://via.placeholder.com/56" alt="Avatar">
+      <div class="user-info">
+        <div id="user-name" class="user-name">讀取中...</div>
+        <div class="coin-badge">
+          🪙 金幣累積：<span id="user-coins">0</span> 幣
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('run')">🏃 跑步上傳</button>
+      <button class="tab-btn" onclick="switchTab('redeem')">☕ 金幣兌換</button>
+      <button class="tab-btn" onclick="switchTab('verify')">🏪 店員核銷</button>
+    </div>
+
+    <!-- Tab 1: Run Submission -->
+    <div id="tab-run" class="card">
+      <div class="card-title">上傳跑步紀錄</div>
+      <form id="form-run" onsubmit="handleRunSubmit(event)">
+        <div class="form-group">
+          <label for="strava-link">Strava / 運動紀錄連結</label>
+          <input type="url" id="strava-link" placeholder="https://www.strava.com/activities/..." required>
+        </div>
+        <div class="form-group">
+          <label for="distance">本次跑步公里數 (km)</label>
+          <input type="number" id="distance" step="0.1" min="0.1" placeholder="例如：5.5" required oninput="calculateCoins()">
+        </div>
+        <div class="form-group">
+          <label>預計獲得金幣</label>
+          <input type="text" id="estimated-coins" value="0 幣" disabled style="background-color: #F1F3F5; font-weight: bold; color: var(--primary);">
+        </div>
+        <button type="submit" class="btn" id="btn-submit-run">送出審核並領取金幣</button>
+      </form>
+    </div>
+
+    <!-- Tab 2: Coin Redemption -->
+    <div id="tab-redeem" class="card" style="display: none;">
+      <div class="card-title">兌換咖啡優惠券</div>
+      <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 12px;">每 100 金幣可兌換 1 張 50 元咖啡抵用券。</p>
+      <button class="btn btn-secondary" onclick="generateCoupon()">使用 100 金幣兌換折價券</button>
+
+      <div id="coupon-display" class="coupon-box">
+        <div>您的專屬兌換碼</div>
+        <div id="coupon-code" class="coupon-code">------</div>
+        <div style="font-size: 0.8rem; color: var(--gray);">請於結帳時出示給店家核銷</div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Merchant Verification -->
+    <div id="tab-verify" class="card" style="display: none;">
+      <div class="card-title">合作店家核銷</div>
+      <div class="form-group">
+        <label for="verify-code">請輸入顧客的兌換碼</label>
+        <input type="text" id="verify-code" placeholder="請輸入 6 位數兌換碼" maxlength="6" style="text-transform: uppercase;">
+      </div>
+      <button class="btn" style="background-color: var(--secondary);" onclick="verifyCoupon()">確認核銷</button>
+    </div>
+
+    <!-- Universal Status Message -->
+    <div id="status-msg" class="status-msg"></div>
+
+  </div>
+
+  <script>
+    // Config
+    const LIFF_ID = '2011169652-nHEHxGn4'; 
+    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE'; // 請在此填入你的 Google Apps Script Web App URL
+
+    let currentUser = {
+      userId: '',
+      displayName: '跑者',
+      pictureUrl: ''
+    };
+
+    // Initialize App
+    window.onload = async function() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        } else {
+          const profile = await liff.getProfile();
+          currentUser.userId = profile.userId;
+          currentUser.displayName = profile.displayName;
+          currentUser.pictureUrl = profile.pictureUrl || 'https://via.placeholder.com/56';
+
+          // Update UI
+          document.getElementById('user-name').innerText = currentUser.displayName;
+          document.getElementById('user-avatar').src = currentUser.pictureUrl;
+
+          // Fetch user current balance
+          fetchUserCoins();
+        }
+      } catch (err) {
+        console.error('LIFF Init Error:', err);
+        showStatus('LIFF 初始化失敗，請於 LINE App 內部開啟。', 'error');
+      } finally {
+        document.getElementById('loading-screen').style.display = 'none';
+      }
+    };
+
+    // Tab Switcher
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.card').forEach(card => card.style.display = 'none');
+      
+      if (tabName === 'run') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-run').style.display = 'block';
+      } else if (tabName === 'redeem') {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-redeem').style.display = 'block';
+      } else if (tabName === 'verify') {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('tab-verify').style.display = 'block';
+      }
+      hideStatus();
+    }
+
+    // Auto-calculate expected coins (e.g., 1 km = 10 coins)
+    function calculateCoins() {
+      const dist = parseFloat(document.getElementById('distance').value) || 0;
+      const coins = Math.floor(dist * 10);
+      document.getElementById('estimated-coins').value = `${coins} 幣`;
+    }
+
+    // Fetch User Balance from GAS
+    async function fetchUserCoins() {
+      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        document.getElementById('user-coins').innerText = '100 (示範)';
+        return;
+      }
+      try {
+        const resp = await fetch(`${GAS_URL}?action=getUser&userId=${currentUser.userId}`);
+        const data = await resp.json();
+        if (data && data.coins !== undefined) {
+          document.getElementById('user-coins').innerText = data.coins;
+        }
+      } catch (err) {
+        console.error('Fetch coins error:', err);
+      }
+    }
+
+    // Submit Running Record
+    async function handleRunSubmit(e) {
+      e.preventDefault();
+      const link = document.getElementById('strava-link').value;
+      const distance = document.getElementById('distance').value;
+      const btn = document.getElementById('btn-submit-run');
+
+      btn.disabled = true;
+      btn.innerText = '處理中...';
+
+      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+        setTimeout(() => {
+          showStatus('紀錄已送出！（目前為前端示範模式）', 'success');
+          btn.disabled = false;
+          btn.innerText = '送出審核並領取金幣';
+          document.getElementById('form-run').reset();
+          calculateCoins();
+        }, 1000);
+        return;
+      }
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            action: 'addRun',
+            userId: currentUser.userId,
+            userName: currentUser.displayName,
+            stravaLink: link,
+            distance: distance
+          })
+        });
+
+        const res = await response.json();
+        if (res.status === 'success') {
+          showStatus('上傳成功！金幣已發放。', 'success');
+          document.getElementById('form-run').reset();
+          calculateCoins();
+          fetchUserCoins();
+        } else {
+          showStatus('上傳失敗：' + res.message, 'error');
+        }
+      } catch (err) {
+        showStatus('網路連線失敗，請稍後再試。', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '送出審核並領取金幣';
+      }
+    }
+
+    // Generate Coupon Code
+    async function generateCoupon() {
+      const code = 'RUN' + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('coupon-code').innerText = code;
+      document.getElementById('coupon-display').style.display = 'block';
+      showStatus('兌換碼已產生！請將畫面出示給合作店家。', 'success');
+    }
+
+    // Verify Coupon Code (Merchant side)
+    function verifyCoupon() {
+      const inputCode = document.getElementById('verify-code').value.trim();
+      if (!inputCode) {
+        showStatus('請輸入有效的 6 位數兌換碼。', 'error');
+        return;
+      }
+      showStatus(`兌換碼 ${inputCode.toUpperCase()} 核銷成功！抵用 50 元。`, 'success');
+      document.getElementById('verify-code').value = '';
+    }
+
+    // Status Helper
+    function showStatus(msg, type) {
+      const el = document.getElementById('status-msg');
+      el.innerText = msg;
+      el.className = `status-msg ${type}`;
+      el.style.display = 'block';
+    }
+
+    function hideStatus() {
+      document.getElementById('status-msg').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
