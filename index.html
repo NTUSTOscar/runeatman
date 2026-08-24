@@ -290,13 +290,13 @@
     <!-- Tab 2: Coin Redemption -->
     <div id="tab-redeem" class="card" style="display: none;">
       <div class="card-title">兌換咖啡優惠券</div>
-      <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 12px;">每 100 金幣可兌換 1 張 50 元咖啡抵用券。</p>
-      <button class="btn btn-secondary" onclick="generateCoupon()">使用 100 金幣兌換折價券</button>
+      <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 12px;">每 100 金幣可兌換 1 張咖啡抵用券。</p>
+      <button class="btn btn-secondary" id="btn-redeem" onclick="generateCoupon()">使用 100 金幣兌換折價券</button>
 
       <div id="coupon-display" class="coupon-box">
         <div>您的專屬兌換碼</div>
         <div id="coupon-code" class="coupon-code">------</div>
-        <div style="font-size: 0.8rem; color: var(--gray);">請於結帳時出示給店家核銷</div>
+        <div style="font-size: 0.8rem; color: var(--gray);">請於 15 分鐘內出示給店家核銷</div>
       </div>
     </div>
 
@@ -304,10 +304,10 @@
     <div id="tab-verify" class="card" style="display: none;">
       <div class="card-title">合作店家核銷</div>
       <div class="form-group">
-        <label for="verify-code">請輸入顧客的兌換碼</label>
+        <label for="verify-code">請輸入顧客的 6 位數兌換碼</label>
         <input type="text" id="verify-code" placeholder="請輸入 6 位數兌換碼" maxlength="6" style="text-transform: uppercase;">
       </div>
-      <button class="btn" style="background-color: var(--secondary);" onclick="verifyCoupon()">確認核銷</button>
+      <button class="btn" id="btn-verify" style="background-color: var(--secondary);" onclick="verifyCoupon()">確認核銷</button>
     </div>
 
     <!-- Universal Status Message -->
@@ -318,7 +318,7 @@
   <script>
     // Config
     const LIFF_ID = '2011169652-nHEHxGn4'; 
-    const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE'; // 請在此填入你的 Google Apps Script Web App URL
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyVeHwhA-Sq2vJiVdmwJe_9tJWAqLmSGQovbrh-3abEgaKF8dK-zp99EgdFfOyZFy4Jwg/exec';
 
     let currentUser = {
       userId: '',
@@ -343,7 +343,7 @@
           document.getElementById('user-avatar').src = currentUser.pictureUrl;
 
           // Fetch user current balance
-          fetchUserCoins();
+          fetchUserData();
         }
       } catch (err) {
         console.error('LIFF Init Error:', err);
@@ -371,31 +371,27 @@
       hideStatus();
     }
 
-    // Auto-calculate expected coins (e.g., 1 km = 10 coins)
+    // Auto-calculate expected coins
     function calculateCoins() {
       const dist = parseFloat(document.getElementById('distance').value) || 0;
       const coins = Math.floor(dist * 10);
       document.getElementById('estimated-coins').value = `${coins} 幣`;
     }
 
-    // Fetch User Balance from GAS
-    async function fetchUserCoins() {
-      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        document.getElementById('user-coins').innerText = '100 (示範)';
-        return;
-      }
+    // Fetch User Data from GAS (action = getUser)
+    async function fetchUserData() {
       try {
-        const resp = await fetch(`${GAS_URL}?action=getUser&userId=${currentUser.userId}`);
-        const data = await resp.json();
-        if (data && data.coins !== undefined) {
-          document.getElementById('user-coins').innerText = data.coins;
+        const resp = await fetch(`${GAS_URL}?action=getUser&userId=${currentUser.userId}&displayName=${encodeURIComponent(currentUser.displayName)}`);
+        const res = await resp.json();
+        if (res.status === 'success' && res.data && res.data.user) {
+          document.getElementById('user-coins').innerText = res.data.user.coins;
         }
       } catch (err) {
         console.error('Fetch coins error:', err);
       }
     }
 
-    // Submit Running Record
+    // Submit Running Record (action = submitRun)
     async function handleRunSubmit(e) {
       e.preventDefault();
       const link = document.getElementById('strava-link').value;
@@ -405,36 +401,24 @@
       btn.disabled = true;
       btn.innerText = '處理中...';
 
-      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-        setTimeout(() => {
-          showStatus('紀錄已送出！（目前為前端示範模式）', 'success');
-          btn.disabled = false;
-          btn.innerText = '送出審核並領取金幣';
-          document.getElementById('form-run').reset();
-          calculateCoins();
-        }, 1000);
-        return;
-      }
-
       try {
         const response = await fetch(GAS_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            action: 'addRun',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'submitRun',
             userId: currentUser.userId,
-            userName: currentUser.displayName,
-            stravaLink: link,
-            distance: distance
+            km: distance,
+            stravaLink: link
           })
         });
 
         const res = await response.json();
         if (res.status === 'success') {
-          showStatus('上傳成功！金幣已發放。', 'success');
+          showStatus(res.message, 'success');
           document.getElementById('form-run').reset();
           calculateCoins();
-          fetchUserCoins();
+          fetchUserData();
         } else {
           showStatus('上傳失敗：' + res.message, 'error');
         }
@@ -446,23 +430,75 @@
       }
     }
 
-    // Generate Coupon Code
+    // Generate Coupon Code (action = createRedeemCode)
     async function generateCoupon() {
-      const code = 'RUN' + Math.floor(1000 + Math.random() * 9000);
-      document.getElementById('coupon-code').innerText = code;
-      document.getElementById('coupon-display').style.display = 'block';
-      showStatus('兌換碼已產生！請將畫面出示給合作店家。', 'success');
+      const btn = document.getElementById('btn-redeem');
+      btn.disabled = true;
+      btn.innerText = '處理中...';
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'createRedeemCode',
+            userId: currentUser.userId
+          })
+        });
+
+        const res = await response.json();
+        if (res.status === 'success') {
+          document.getElementById('coupon-code').innerText = res.code;
+          document.getElementById('coupon-display').style.display = 'block';
+          showStatus(res.message, 'success');
+          fetchUserData();
+        } else {
+          showStatus('兌換失敗：' + res.message, 'error');
+        }
+      } catch (err) {
+        showStatus('網路連線失敗，請稍後再試。', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '使用 100 金幣兌換折價券';
+      }
     }
 
-    // Verify Coupon Code (Merchant side)
-    function verifyCoupon() {
+    // Verify Coupon Code (action = verifyRedeemCode)
+    async function verifyCoupon() {
       const inputCode = document.getElementById('verify-code').value.trim();
       if (!inputCode) {
         showStatus('請輸入有效的 6 位數兌換碼。', 'error');
         return;
       }
-      showStatus(`兌換碼 ${inputCode.toUpperCase()} 核銷成功！抵用 50 元。`, 'success');
-      document.getElementById('verify-code').value = '';
+
+      const btn = document.getElementById('btn-verify');
+      btn.disabled = true;
+      btn.innerText = '核銷中...';
+
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'verifyRedeemCode',
+            code: inputCode,
+            storeName: '合作門市'
+          })
+        });
+
+        const res = await response.json();
+        if (res.status === 'success') {
+          showStatus(res.message, 'success');
+          document.getElementById('verify-code').value = '';
+        } else {
+          showStatus('核銷失敗：' + res.message, 'error');
+        }
+      } catch (err) {
+        showStatus('網路連線失敗，請稍後再試。', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '確認核銷';
+      }
     }
 
     // Status Helper
